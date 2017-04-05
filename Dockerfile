@@ -20,8 +20,8 @@ COPY rootfs/generate-certs /usr/local/bin/generate-certs
 WORKDIR /certs
 
 RUN apk --update --clean-protected --no-cache add \
-    openssl \
-		bash \
+	openssl \
+	bash \
 	&& mkdir /usr/src
 
 VOLUME /certs
