@@ -9,7 +9,7 @@ docker run --rm \
   -e SSL_SUBJECT=andradaprieto.es \
   -e SSL_DNS=andradaprieto \
   -v /var/certs:/certs \
-  dockreg01.virt.cga/capacidad/ca-virt:latest
+  jorgeandrada/ca-certificates:latest
 ```
 
 ### Creación de certificados, posteriores ejecuciones:
@@ -18,5 +18,5 @@ docker run --rm \
   -e SSL_SUBJECT=blog.andradaprieto.es \
   -e SSL_DNS=blog \
   -v /var/certs:/certs \
-  dockreg01.virt.cga/capacidad/ca-virt:latest
+  jorgeandrada/ca-certificates:latest
 ```
