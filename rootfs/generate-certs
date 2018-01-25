@@ -1,5 +1,10 @@
 #!/bin/bash
 
+#debug
+# set -x
+# trap read debug
+export SSL_SUBJECT=blog2.test.local
+export SSL_DNS=blog2
 echo "----------------------------"
 echo "| OMGWTFSSL Cert Generator |"
 echo "----------------------------"
@@ -36,14 +41,15 @@ export DEBUG=${DEBUG:=1}
 
 echo "--> Certificate Authority"
 
-if [[ -e ./${CA_KEY} ]]; then
+#if [[ -e ./${CA_KEY} ]]; then
+if [[ -f ./${CA_KEY} ]]; then
     echo "====> Using existing CA Key ${CA_KEY}"
 else
     echo "====> Generating new CA key ${CA_KEY}"
     openssl genrsa -out ${CA_KEY} 2048
 fi
 
-if [[ -e ./${CA_CERT} ]]; then
+if [[ -f ./${CA_CERT} ]]; then
     echo "====> Using existing CA Certificate ${CA_CERT}"
 else
     echo "====> Generating new CA Certificate ${CA_CERT}"
@@ -112,4 +118,5 @@ echo -n
 
 echo "Certificado creado correctamente para el host:" $(openssl x509 -in $SSL_CERT -text | grep $SSL_DNS | sed 's/^[ v]*//')
 echo "Válido hasta el " $(openssl x509 -in $SSL_CERT -text | grep "Not After" | awk -F ":" '{print$2":"$3":"$4}' | sed 's/^[ v]*//')
+echo "Verificando certificado $SSL_CERT contra el CA $CA_CERT:" $(openssl verify -verbose -CAfile $CA_CERT $SSL_CERT)
 mv $SSL_SUBJECT* /certs
