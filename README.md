@@ -1,9 +1,9 @@
 # ca-certificates [![](https://images.microbadger.com/badges/version/jorgeandrada/ca-certificates:latest.svg)](https://microbadger.com/images/jorgeandrada/ca-certificates:latest "Get your own version badge on microbadger.com")  [![](https://images.microbadger.com/badges/image/jorgeandrada/ca-certificates:latest.svg)](https://microbadger.com/images/jorgeandrada/ca-certificates:latest "Get your own image badge on microbadger.com") [![](https://images.microbadger.com/badges/commit/jorgeandrada/ca-certificates:latest.svg)](https://microbadger.com/images/jorgeandrada/ca-certificates:latest "Get your own commit badge on microbadger.com")
-Crea CA y certificados basados en el mismo.
+Create CA and certificates based on it.
 
-## Ejecución:
+## Execution:
 
-### Crear CA, primera ejecución:
+### Create CA, first execution:
 ```shell
 docker run --rm \
   -e SSL_SUBJECT=andradaprieto.es \
@@ -12,7 +12,7 @@ docker run --rm \
   jorgeandrada/ca-certificates:latest
 ```
 
-### Creación de certificados, posteriores ejecuciones:
+### Creation of certificates, subsequent executions:
 ```shell
 docker run --rm \
   -e SSL_SUBJECT=blog.andradaprieto.es \
@@ -21,14 +21,10 @@ docker run --rm \
   jorgeandrada/ca-certificates:latest
 ```
 
-=================
-
-
-Advanced Usage
---------------
+## Advanced Usage
 
 Customize the certs using the following Environment Variables:
-
+* `DEBUG` debug level 0/1/2, default `0`
 * `CA_KEY` CA Key file, default `ca-key.pem` __[1]__
 * `CA_CERT` CA Certificate file, default `ca.pem` __[1]__
 * `CA_SUBJECT` CA Subject, default `test-ca`
@@ -51,25 +47,17 @@ Examples
 
 ### Create Certificates for NGINX
 
-_Creating web certs for testing SSL just got a hell of a lot easier..._
-
-Create Certificate:
-```
-$ docker run -v /tmp/certs:/certs \
-  -e SSL_SUBJECT=test.example.com   paulczar/omgwtfssl
-```
-
 Enable SSL in `/etc/nginx/sites-enabled/default`:
 
 ```
 server {
         listen 443;
-        server_name test.example.com;
+        server_name blog.andradaprieto.es;
         root html;
         index index.html index.htm;
         ssl on;
-        ssl_certificate /tmp/certs/cert.pem;
-        ssl_certificate_key /tmp/certs/key.pem;
+        ssl_certificate /etc/nginx/certs/blog.andradaprieto.es-cert.pem;
+        ssl_certificate_key /etc/nginx/certs/blog.andradaprieto.es-key.pem;
         ssl_session_timeout 5m;
         ssl_protocols       TLSv1 TLSv1.1 TLSv1.2;
         ssl_ciphers         HIGH:!aNULL:!MD5;
@@ -83,8 +71,8 @@ Restart NGINX and test:
 
 ```
 $ service nginx restart
-$ echo '127.0.2.1       test.example.com' >> /etc/hosts
-$ curl --cacert /tmp/certs/ca.pem https://test.example.com
+$ echo '127.0.2.1       blog.andradaprieto.es' >> /etc/hosts
+$ curl --cacert /etc/nginx/certs/ca.pem https://blog.andradaprieto.es
 <!DOCTYPE html>
 <html>
 <head>

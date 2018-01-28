@@ -107,18 +107,25 @@ if [ "$DEBUG" -ge "1" ]; then {
 }
 fi
 echo -e "\n\n\t\t\tSUMMARY:\n\t\t\t======="
-echo -e "\n- Certificado creado correctamente para el host:" $(openssl x509 -in "$SSL_CERT" -text | grep "$SSL_DNS" | sed 's/^[ v]*//')
-echo -e "\n- Válido hasta el " $(openssl x509 -in "$SSL_CERT" -text | grep "Not After" | awk -F ":" '{print$2":"$3":"$4}' | sed 's/^[ v]*//')
-echo -e "\n- Verificando certificado $SSL_CERT contra el CA $CA_CERT:" $(openssl verify -verbose -CAfile "$CA_CERT" "$SSL_CERT")
-#CERTIFICADOS=$(echo "$SSL_SUBJECT" | awk -F "." '{print$2}')
+echo -e "\n- Certificate created correctly for the host:" $(openssl x509 -in "$SSL_CERT" -text | grep "$SSL_DNS" | sed 's/^[ v]*//')
+echo -e "\n- Valid until: " $(openssl x509 -in "$SSL_CERT" -text | grep "Not After" | awk -F ":" '{print$2":"$3":"$4}' | sed 's/^[ v]*//')
+echo -e "\n- Verifying certificate $SSL_CERT contra el CA $CA_CERT:" $(openssl verify -verbose -CAfile "$CA_CERT" "$SSL_CERT")
+CERT_MD5=$(openssl x509 -noout -modulus -in "$SSL_CERT" | openssl md5)
+KEY_MD5=$(openssl rsa  -noout -modulus -in "${SSL_KEY}" | openssl md5)
+echo -e "\n- Verifying TLS key:"
+if [ "$CERT_MD5" == "$KEY_MD5" ]; then
+  echo -e "\n- Verifying TLS key: Private key matches certificate"
+else
+  echo -e "\n- Verifying TLS key: Private key does not match certificate"
+fi
+
 rm openssl.cnf
 mv * /certs
 if [ "$DEBUG" -ge "1" ]; then ls -lh /certs; fi
 
 export CA_CERT="/certs/ca.pem"
-echo -e "\n- Verificando todos los certificados contra el CA $CA_CERT:"
+echo -e "\n- Verifying all certificates against the CA $CA_CERT:"
 for i  in /certs/*-cert.pem; do
-  #echo -e "\n\t - Comprobando: $i"
   echo -e "\t - "$(openssl verify -verbose -CAfile "$CA_CERT" "$i")
 done
 
