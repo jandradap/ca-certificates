@@ -102,17 +102,29 @@ openssl x509 -req -in "${SSL_CSR}" -CA "${CA_CERT}" -CAkey "${CA_KEY}" -CAcreate
   -days "${SSL_EXPIRE}" -extensions v3_req -extfile "${SSL_CONFIG}" || exit 1
 
 
+if [ "$SSL_DNS" == "*" ]; then {
+  echo -e "\n\tWildcard certificate"
+  DOMINIO=$(echo $SSL_SUBJECT | rev | cut -d "." -f 1-2 | rev)
+  mv $SSL_KEY wildcard.$DOMINIO-key.pem
+  mv $SSL_CSR wildcard.$DOMINIO-key.csr
+  mv $SSL_CERT wildcard.$DOMINIO-cert.pem
+  export SSL_KEY="wildcard.$DOMINIO-key.pem"
+  export SSL_CSR="wildcard.$DOMINIO-key.csr"
+  export SSL_CERT="wildcard.$DOMINIO-cert.pem"
+}
+fi
+
 if [ "$DEBUG" -ge "1" ]; then {
   echo -e "\n\t\t\t\tDEBUG:\n\t\t\t\t=====\n\tCA CERT:\n\t*******\n$(cat $CA_CERT)\n\n\tSSL_KEY:\n\t*******\n$(cat $SSL_KEY)\n\tSSL_CERT:\n\t********\n$(cat $SSL_CERT)\n"
 }
 fi
+
 echo -e "\n\n\t\t\tSUMMARY:\n\t\t\t======="
 echo -e "\n- Certificate created correctly for the host:" $(openssl x509 -in "$SSL_CERT" -text | grep "$SSL_DNS" | sed 's/^[ v]*//')
 echo -e "\n- Valid until: " $(openssl x509 -in "$SSL_CERT" -text | grep "Not After" | awk -F ":" '{print$2":"$3":"$4}' | sed 's/^[ v]*//')
 echo -e "\n- Verifying certificate $SSL_CERT contra el CA $CA_CERT:" $(openssl verify -verbose -CAfile "$CA_CERT" "$SSL_CERT")
 CERT_MD5=$(openssl x509 -noout -modulus -in "$SSL_CERT" | openssl md5)
 KEY_MD5=$(openssl rsa  -noout -modulus -in "${SSL_KEY}" | openssl md5)
-echo -e "\n- Verifying TLS key:"
 if [ "$CERT_MD5" == "$KEY_MD5" ]; then
   echo -e "\n- Verifying TLS key: Private key matches certificate"
 else

@@ -20,6 +20,14 @@ docker run --rm \
   -v $(pwd)/certs:/certs \
   jorgeandrada/ca-certificates:latest
 ```
+### Generate Wildcard cert
+```shell
+docker run --rm \
+  -e SSL_SUBJECT="*.andradaprieto.es" \
+  -e SSL_DNS="*" \
+  -v $(pwd)/certs:/certs \
+  jorgeandrada/ca-certificates:latest
+```
 
 ## Advanced Usage
 
