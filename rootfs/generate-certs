@@ -1,8 +1,8 @@
 #!/bin/bash
-
+clear
 #debug
-# set -x
-# trap read debug
+if [ "$DEBUG" == "2" ]; then set -x; fi
+if [ "$DEBUG" == "3" ]; then trap read debug; fi
 
 echo "----------------------------"
 echo "| OMGWTFSSL Cert Generator |"
@@ -16,47 +16,44 @@ export KEY_CITY="${KEY_CITY-"Sevilla"}"
 export KEY_ORG="${KEY_ORG-"Pruebas S.A"}"
 export KEY_OU="${KEY_OU-"Organizacion de Prueba"}"
 export KEY_EMAIL="${KEY_EMAIL-"jandradap@gmail.com"}"
-
 export CA_KEY="${CA_KEY-"ca-key.pem"}"
 export CA_CERT="${CA_CERT-"ca.pem"}"
 export CA_SUBJECT="${CA_SUBJECT:-"Root CA"}"
 export CA_EXPIRE="${CA_EXPIRE:-"100000"}"
-
 SSL_CN=""
 if [ ! -z $SSL_SUBJECT ]; then SSL_CN="$SSL_SUBJECT-"; fi
 export SSL_SUBJECT="${SSL_SUBJECT:-"test.local"}"
-
 export SSL_CONFIG="${SSL_CONFIG:-"openssl.cnf"}"
 export SSL_KEY="${SSL_KEY:-"${SSL_CN}key.pem"}"
 export SSL_CSR="${SSL_CSR:-"${SSL_CN}key.csr"}"
 export SSL_CERT="${SSL_CERT:-"${SSL_CN}cert.pem"}"
 export SSL_SIZE="${SSL_SIZE:-"2048"}"
 export SSL_EXPIRE="${SSL_EXPIRE:-"100000"}"
-
 export SSL_DNS="${SSL_DNS}"
 export SSL_IP="${SSL_IP}"
-
-export DEBUG="${DEBUG:=1}"
+export DEBUG="${DEBUG:=0}"
 
 echo "--> Certificate Authority"
 
 if [[ -f /certs/${CA_KEY} ]]; then
-    echo "====> Using existing CA Key ${CA_KEY}"
+    echo -e "\n====> Using existing CA Key ${CA_KEY}"
     CA_KEY="/certs/${CA_KEY}"
 else
-    echo "====> Generating new CA key ${CA_KEY}"
+    echo -e "\n====> Generating new CA key ${CA_KEY}"
     openssl genrsa -out "${CA_KEY}" 2048
 fi
 
 if [[ -f /certs/${CA_CERT} ]]; then
-    echo "====> Using existing CA Certificate ${CA_CERT}"
+    echo -e "\n====> Using existing CA Certificate ${CA_CERT}"
     CA_CERT="/certs/${CA_CERT}"
 else
-    echo "====> Generating new CA Certificate ${CA_CERT}"
-    openssl req -x509 -new -nodes -key "${CA_KEY}" -days "${CA_EXPIRE}" -out "${CA_CERT}" -subj "/emailAddress=${KEY_EMAIL}/CN=${CA_SUBJECT}/C=${KEY_COUNTRY}/ST=${KEY_PROVINCE}/L=${KEY_CITY}/O=${KEY_ORG}/OU=${KEY_OU}" || exit 1
+    echo -e "\n====> Generating new CA Certificate ${CA_CERT}"
+    #openssl req -x509 -new -nodes -key "${CA_KEY}" -days "${CA_EXPIRE}" -out "${CA_CERT}" -subj "/emailAddress=${KEY_EMAIL}/CN=${CA_SUBJECT}/C=${KEY_COUNTRY}/ST=${KEY_PROVINCE}/L=${KEY_CITY}/O=${KEY_ORG}/OU=${KEY_OU}" || exit 1
+    openssl req -x509 -new -newkey rsa:2048 -nodes -key "${CA_KEY}" -days "${CA_EXPIRE}" -out "${CA_CERT}" -subj "/emailAddress=${KEY_EMAIL}/CN=${CA_SUBJECT}/C=${KEY_COUNTRY}/ST=${KEY_PROVINCE}/L=${KEY_CITY}/O=${KEY_ORG}/OU=${KEY_OU}" || exit 1
 fi
 
-[[ -n $DEBUG ]] && cat "$CA_CERT"
+#[[ -n $DEBUG ]] && cat "$CA_CERT"
+if [ "$DEBUG" -ge "1" ]; then cat $CA_CERT; fi
 
 echo "====> Generating new config file ${SSL_CONFIG}"
 cat > "${SSL_CONFIG}" <<EOM
@@ -90,35 +87,39 @@ EOM
         done
     fi
 fi
+if [ "$DEBUG" -ge "1" ]; then cat openssl.cnf; fi
 
-echo "====> Generating new SSL KEY ${SSL_KEY}"
+echo -e "\n====> Generating new SSL KEY ${SSL_KEY}"
 openssl genrsa -out "${SSL_KEY}" "${SSL_SIZE}"  || exit 1
 
-echo "====> Generating new SSL CSR ${SSL_CSR}"
-openssl req -new -key "${SSL_KEY}" -out "${SSL_CSR}" -subj "/emailAddress=${KEY_EMAIL}/CN=${CA_SUBJECT}/C=${KEY_COUNTRY}/ST=${KEY_PROVINCE}/L=${KEY_CITY}/O=${KEY_ORG}/OU=${KEY_OU}" -config ${SSL_CONFIG}  || exit 1
+echo -e "\n====> Generating new SSL CSR ${SSL_CSR}"
+openssl req -new -newkey rsa:2048 -key "${SSL_KEY}" \
+  -out "${SSL_CSR}" -subj "/emailAddress=${KEY_EMAIL}/CN=${CA_SUBJECT}/C=${KEY_COUNTRY}/ST=${KEY_PROVINCE}/L=${KEY_CITY}/O=${KEY_ORG}/OU=${KEY_OU}" \
+  -config ${SSL_CONFIG}  || exit 1
 
-echo "====> Generating new SSL CERT ${SSL_CERT}"
+echo -e "\n====> Generating new SSL CERT ${SSL_CERT}"
 openssl x509 -req -in "${SSL_CSR}" -CA "${CA_CERT}" -CAkey "${CA_KEY}" -CAcreateserial -out "${SSL_CERT}" \
-    -days "${SSL_EXPIRE}" -extensions v3_req -extfile "${SSL_CONFIG}" || exit 1
+  -days "${SSL_EXPIRE}" -extensions v3_req -extfile "${SSL_CONFIG}" || exit 1
 
-echo -n
-echo -n
-echo "***** CA CERT"
-cat "$CA_CERT"
-echo -n
-echo -n
-echo "***** SSL_KEY"
-cat "$SSL_KEY"
-echo -n
-echo -n
-echo "***** SSL CERT"
-cat "$SSL_CERT"
-echo -n
-echo -n
 
-echo "Certificado creado correctamente para el host:" $(openssl x509 -in "$SSL_CERT" -text | grep "$SSL_DNS" | sed 's/^[ v]*//')
-echo "Válido hasta el " $(openssl x509 -in "$SSL_CERT" -text | grep "Not After" | awk -F ":" '{print$2":"$3":"$4}' | sed 's/^[ v]*//')
-echo "Verificando certificado $SSL_CERT contra el CA $CA_CERT:" $(openssl verify -verbose -CAfile "$CA_CERT" "$SSL_CERT")
-CERTIFICADOS=$(echo "$SSL_SUBJECT" | awk -F "." '{print$2}')
+if [ "$DEBUG" -ge "1" ]; then {
+  echo -e "\n\t\t\t\tDEBUG:\n\t\t\t\t=====\n\tCA CERT:\n\t*******\n$(cat $CA_CERT)\n\n\tSSL_KEY:\n\t*******\n$(cat $SSL_KEY)\n\tSSL_CERT:\n\t********\n$(cat $SSL_CERT)\n"
+}
+fi
+echo -e "\n\n\t\t\tSUMMARY:\n\t\t\t======="
+echo -e "\n- Certificado creado correctamente para el host:" $(openssl x509 -in "$SSL_CERT" -text | grep "$SSL_DNS" | sed 's/^[ v]*//')
+echo -e "\n- Válido hasta el " $(openssl x509 -in "$SSL_CERT" -text | grep "Not After" | awk -F ":" '{print$2":"$3":"$4}' | sed 's/^[ v]*//')
+echo -e "\n- Verificando certificado $SSL_CERT contra el CA $CA_CERT:" $(openssl verify -verbose -CAfile "$CA_CERT" "$SSL_CERT")
+#CERTIFICADOS=$(echo "$SSL_SUBJECT" | awk -F "." '{print$2}')
+rm openssl.cnf
 mv * /certs
-echo "Verificando todos los certificados contra el CA $CA_CERT:" $(openssl verify -verbose -CAfile "$CA_CERT" /certs/*$CERTIFICADOS.es-cert.pem)
+if [ "$DEBUG" -ge "1" ]; then ls -lh /certs; fi
+
+export CA_CERT="/certs/ca.pem"
+echo -e "\n- Verificando todos los certificados contra el CA $CA_CERT:"
+for i  in /certs/*-cert.pem; do
+  #echo -e "\n\t - Comprobando: $i"
+  echo -e "\t - "$(openssl verify -verbose -CAfile "$CA_CERT" "$i")
+done
+
+echo -e "\n\n"
